@@ -1,61 +1,117 @@
 package io.turntabl.my;
 
-import org.junit.Assert;
-import org.junit.Test;
 
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.stream.IntStream;
 
 public class ProducerConsumer {
-    private static Integer threadName;
-    int[] ArrayQueue;
-    int i;
-    public static void main(String[] args) throws InterruptedException {
-        ArrayBlockingQueue<Integer> ArrayQueue = new ArrayBlockingQueue<>(12);
+    public static void main(String[] args) throws InterruptedException{
+            // Object of a class that has both produce()
+            // and consume() methods
+            final PC pc = new PC();
 
-        Thread producer_t1 = new Thread(()->
-                IntStream.range(0, 12).forEach(i ->{
-            ArrayQueue.offer(i);
-            Thread.yield();
-        }));
+            // Create producer thread
+            Thread t1 = new Thread(new Runnable() {
+                @Override
+                public void run()
+                {
+                    try {
+                        pc.produce();
+                    }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
 
-        Thread consumer_t2 = new Thread(()->
-                IntStream.range(0, 12).forEach(i ->{
-            System.out.println("Consumer: " + ArrayQueue.poll());
-            Thread.yield();
-        }));
+            // Create consumer thread
+            Thread t2 = new Thread(new Runnable() {
+                @Override
+                public void run()
+                {
+                    try {
+                        pc.consume();
+                    }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
 
-        producer_t1.start();
-        consumer_t2.start();
+            // Start both threads
+            t1.start();
+            t2.start();
 
-        producer_t1.join();
-        consumer_t2.join();
-    }
-    @Test
-    public void testOffer(){
-        ArrayBlockingQueue<String> ArrayQueue = new ArrayBlockingQueue<>(1);
-        Queue q = Collections.checkedQueue(ArrayQueue, String.class);
-
-        try{
-            q.offer(null);
-            System.err.println("should throw NullPointException. ");
-        }catch (NullPointerException npe){
-            // Do nothing
+            // t1 finishes before t2
+            t1.join();
+            t2.join();
         }
-        try{
-            q.offer(0);
-            System.err.println("should throw ClassCastException. ");
-        }catch (ClassCastException cce){
-            // Do nothing
+
+        // This class has a list, producer (adds items to list
+        // and consumber (removes items).
+        public static class PC {
+
+            // Create a list shared by producer and consumer
+            // Size of list is 2.
+            LinkedList<Integer> list = new LinkedList<>();
+            int capacity = 1;
+
+            // Function called by producer thread
+            public void produce() throws InterruptedException
+            {
+                int value = 0;
+                while (true) {
+                    synchronized (this)
+                    {
+                        // producer thread waits while list
+                        // is full
+                        while (list.size() == capacity)
+                            wait();
+
+                        System.out.println("Producer produced-"
+                                + value);
+
+                        // to insert the jobs in the list
+                        list.add(value++);
+
+                        // notifies the consumer thread that
+                        // now it can start consuming
+                        notify();
+
+                        // makes the working of program easier
+                        // to  understand
+                        Thread.sleep(1000);
+                    }
+                }
+            }
+
+            // Function called by consumer thread
+            public void consume() throws InterruptedException
+            {
+                while (true) {
+                    synchronized (this)
+                    {
+                        // consumer thread waits while list
+                        // is empty
+                        while (list.size() == 0)
+                            wait();
+
+                        // to retrieve the first job in the list
+                        int val = list.removeFirst();
+
+                        System.out.println("Consumer consumed-"
+                                + val);
+
+                        // Wake up producer thread
+                        notify();
+
+                        // and sleep
+                        Thread.sleep(1000);
+                    }
+                }
+            }
         }
-        Assert.assertTrue("queue should have room", q.offer("0"));
-
-        // no room in the inn
-        Assert.assertFalse("queue should be full", q.offer("1"));
-
-
-
     }
-
-}

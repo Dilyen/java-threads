@@ -5,7 +5,7 @@ import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class Collections {
+public class Collection {
    // private static String threadName;
     public static void main(String[] args) throws InterruptedException {
         List<Thread> threads = IntStream.range(0, 10).mapToObj(i -> new Thread (() -> {
